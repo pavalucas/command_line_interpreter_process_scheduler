@@ -1,3 +1,6 @@
+# Vi files
+*.swp
+
 # Object files
 *.ko
 *.obj
