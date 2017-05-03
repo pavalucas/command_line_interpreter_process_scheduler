@@ -21,6 +21,7 @@ void readExec()
 
     while(fgets(line, len, fp) != NULL)
     {
+		
         splitLine = strtok(line, " =\n");
         splitLine = strtok(NULL, " =\n");
         strcpy(prog[numProg], splitLine);

@@ -198,26 +198,63 @@ int onlyProgram(int finished[], int n)
 
 }
 
+NODE* nextProcess(Queue* priorProc[], Queue* roundRobin)
+{
+	int i;
+	NODE* curProgNode;
+	for(i = 1; i <= 7; i++)
+	{
+		if(priorProc[i] != NULL && !isEmpty(priorProc[i]))
+		{
+			return Dequeue(priorProc[i]);	
+		}
+	}
+	if(roundRobin != NULL && !isEmpty(roundRobin))
+	{
+		return Dequeue(roundRobin);	
+	}
+	return NULL;
+}
+
+void putProcessQueue(Queue* priorProc[], Queue* roundRobin, int priority[], NODE* progNode)
+{
+	int curProg = progNode->data.info;
+	if(priority[curProg] == -1)
+		Enqueue(roundRobin, progNode);
+	else
+		Enqueue(priorProc[curProg], progNode);
+}
+
 void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], int qtdProg)
 {
-
-    
 	int pid[MAX_PROG], n_pid, i, j, curProg;
 	int finished[MAX_PROG];
 	int result, status;
 	int quantum = 3;
 	Queue* roundRobin = ConstructQueue(qtdProg);
+	Queue* priorityProc[7];
 	NODE *curProgNode;
-  	for(i = 0; i < qtdProg; i++)
-	    	finished[i] = 0;
+
+	for(i = 1; i <= 7; i++)
+		priorityProc[i] = ConstructQueue(qtdProg);
 
 	for (i = 0; i < qtdProg; i++) 
-	{	// ROUND ROBIN
+	{	
+		finished[i] = 0;
+		// ROUND ROBIN
 		if(priority[i] == -1 && iniRT[i] == -1 && durationRT[i] == -1)
     	{
 			curProgNode = (NODE*) malloc(sizeof (NODE));
 			curProgNode->data.info = i;
 			Enqueue(roundRobin, curProgNode);
+		} 
+		// PRIORITY
+		else if(priority[i] != -1)
+		{
+			
+			curProgNode = (NODE*) malloc(sizeof (NODE));
+			curProgNode->data.info = i;
+			Enqueue(priorityProc[priority[i]], curProgNode);
 		}
 	}
 
@@ -237,7 +274,7 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
     }
 
     j = 0;
-	curProgNode = Dequeue(roundRobin);	
+	curProgNode = nextProcess(priorityProc, roundRobin);
 	curProg = curProgNode->data.info;
     while(1)
     {
@@ -260,8 +297,8 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
 				if(!onlyProgram(finished, qtdProg))
 				{
 					kill(pid[curProg], SIGSTOP);
-					Enqueue(roundRobin, curProgNode);
-					curProgNode = Dequeue(roundRobin);	
+					putProcessQueue(priorityProc, roundRobin, priority, curProgNode);
+					curProgNode = nextProcess(priorityProc, roundRobin);	
 					curProg = curProgNode->data.info;
 				}
 				j = 0;
@@ -273,9 +310,10 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
 				printf("Terminou  P%d\n", curProg+1);
 				fflush(stdout);
 				finished[curProg] =1;
+				free(curProgNode);
 				if(!isEmpty(roundRobin))
 				{
-					curProgNode = Dequeue(roundRobin);	
+					curProgNode = nextProcess(priorityProc, roundRobin);
 					curProg = curProgNode->data.info;
 				}
 			  	j = 0;
@@ -295,4 +333,5 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
     //     printf("INITIAL: %d\n", iniRT[i]);
     //     printf("DURATION: %d\n", durationRT[i]);
     // }
+	
 }
