@@ -201,74 +201,89 @@ int onlyProgram(int finished[], int n)
 void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], int qtdProg)
 {
 
-    // if(priority[i] == -1 && iniRT[i] == -1 && durationRT[i] == -1)
-    // {
-        // ROUND ROBIN
-        int i, pid[MAX_PROG], n_pid, j;
-        int finished[MAX_PROG];
-        int result, status;
-        int quantum = 4;
-        for(i = 0; i < qtdProg; i++)
-            finished[i] = 0;
+    
+	int pid[MAX_PROG], n_pid, i, j, curProg;
+	int finished[MAX_PROG];
+	int result, status;
+	int quantum = 3;
+	Queue* roundRobin = ConstructQueue(qtdProg);
+	NODE *curProgNode;
+  	for(i = 0; i < qtdProg; i++)
+	    	finished[i] = 0;
 
-        for(i = 0; i < qtdProg; i++)
+	for (i = 0; i < qtdProg; i++) 
+	{	// ROUND ROBIN
+		if(priority[i] == -1 && iniRT[i] == -1 && durationRT[i] == -1)
+    	{
+			curProgNode = (NODE*) malloc(sizeof (NODE));
+			curProgNode->data.info = i;
+			Enqueue(roundRobin, curProgNode);
+		}
+	}
+
+    for(i = 0; i < qtdProg; i++)
+    {
+        n_pid = fork();
+        if(n_pid != 0)
         {
-            n_pid = fork();
-            if(n_pid != 0)
-            {
-                pid[i] = n_pid;
-                kill(n_pid, SIGSTOP);
-            }
-            else
-            {
-                sleep(1);
-                execve(prog[i], NULL, NULL);
-            }
+            pid[i] = n_pid;
+            kill(n_pid, SIGSTOP);
         }
-
-        i = j = 0;
-        while(1)
+        else
         {
-            if(allProgramsFinished(finished, qtdProg))
-                    break;
-            if(!finished[i])
-            {
-                kill(pid[i], SIGCONT);
-                fflush(stdout);
-                pid_atual = pid[i];
-                sleep(1);
-                result = waitpid(pid[i], &status, WNOHANG);
-                if (result == 0)
-                {
-                  j++;
-                  if(j == quantum)
-                  {
-
-                    if(!onlyProgram(finished, qtdProg))
-                    {
-                        kill(pid[i], SIGSTOP);
-                        i++;
-                    }
-                    j = 0;
-                  }
-
-                }
-                else
-                {
-                  printf("Terminou  P%d\n", i+1);
-                  fflush(stdout);
-                  finished[i] =1;
-                  j = 0;
-                  i++;
-                }
-            }else{
-                i++;
-            }
-
-            i %= qtdProg;
-
-            fflush(stdout);
+            sleep(1);
+            execve(prog[i], NULL, NULL);
         }
+    }
+
+    j = 0;
+	curProgNode = Dequeue(roundRobin);	
+	curProg = curProgNode->data.info;
+    while(1)
+    {
+
+        if(allProgramsFinished(finished, qtdProg))
+			break;
+        if(!finished[curProg])
+        {
+			kill(pid[curProg], SIGCONT);
+			fflush(stdout);
+			pid_atual = pid[curProg];
+			sleep(1);
+			result = waitpid(pid[curProg], &status, WNOHANG);
+			if (result == 0)
+			{
+			  j++;
+			  if(j == quantum)
+			  {
+
+				if(!onlyProgram(finished, qtdProg))
+				{
+					kill(pid[curProg], SIGSTOP);
+					Enqueue(roundRobin, curProgNode);
+					curProgNode = Dequeue(roundRobin);	
+					curProg = curProgNode->data.info;
+				}
+				j = 0;
+			  }
+
+			}
+			else
+			{
+				printf("Terminou  P%d\n", curProg+1);
+				fflush(stdout);
+				finished[curProg] =1;
+				if(!isEmpty(roundRobin))
+				{
+					curProgNode = Dequeue(roundRobin);	
+					curProg = curProgNode->data.info;
+				}
+			  	j = 0;
+			}
+		}
+
+		fflush(stdout);
+    }
     //}
     // else if(priority[i] != -1)
     // {

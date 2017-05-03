@@ -10,13 +10,10 @@
 int main()
 {
     int i = 0;
-    while(1)
+    for(i = 0; i < 6; i++)
     {
         printf("P2 rodando %d\n", i);
         fflush(stdout);
         sleep(1);
-        i++;
-        if(i == 8)
-            return 1;
     }
 }
