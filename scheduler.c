@@ -225,8 +225,23 @@ void putProcessQueue(Queue* priorProc[], Queue* roundRobin, int priority[], NODE
 		Enqueue(priorProc[priority[curProg]], progNode);
 }
 
-void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], int qtdProg)
+void scheduler(char prog[][TAM])
 {
+	
+	int shmid_priority = shmget(1001, MAX_PROG * sizeof(int), S_IRUSR | S_IWUSR);
+	int* pPriority = (int*) shmat(shmid_priority, 0, 0);
+
+	int shmid_iniRT = shmget(1002, MAX_PROG * sizeof(int), S_IRUSR | S_IWUSR);
+	int* pIniRT = (int*) shmat(shmid_iniRT, 0, 0);
+
+	int shmid_durationRT = shmget(1003, MAX_PROG * sizeof(int), S_IRUSR | S_IWUSR);
+	int* pDurationRT = (int*) shmat(shmid_durationRT, 0, 0);
+
+	int shmid_qtProg = shmget(1004, sizeof(int), S_IRUSR | S_IWUSR);
+	int* pQtProg = (int*) shmat(shmid_qtProg, 0, 0);
+
+	int qtdProg = *pQtProg;
+
 	int pid[MAX_PROG], n_pid, i, j, curProg;
 	int finished[MAX_PROG];
 	int result, status;
@@ -242,19 +257,19 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
 	{	
 		finished[i] = 0;
 		// ROUND ROBIN
-		if(priority[i] == -1 && iniRT[i] == -1 && durationRT[i] == -1)
+		if(pPriority[i] == -1 && pIniRT[i] == -1 && pDurationRT[i] == -1)
     	{
 			curProgNode = (NODE*) malloc(sizeof (NODE));
 			curProgNode->data.info = i;
 			Enqueue(roundRobin, curProgNode);
 		} 
 		// PRIORITY
-		else if(priority[i] != -1)
+		else if(pPriority[i] != -1)
 		{
 			
 			curProgNode = (NODE*) malloc(sizeof (NODE));
 			curProgNode->data.info = i;
-			Enqueue(priorityProc[priority[i]], curProgNode);
+			Enqueue(priorityProc[pPriority[i]], curProgNode);
 		}
 	}
 
@@ -297,7 +312,7 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
 				if(!onlyProgram(finished, qtdProg))
 				{
 					kill(pid[curProg], SIGSTOP);
-					putProcessQueue(priorityProc, roundRobin, priority, curProgNode);
+					putProcessQueue(priorityProc, roundRobin, pPriority, curProgNode);
 					curProgNode = nextProcess(priorityProc, roundRobin);	
 					curProg = curProgNode->data.info;
 				}
@@ -330,8 +345,19 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
     // else
     // {
     //     printf("REAL TIME\n");
-    //     printf("INITIAL: %d\n", iniRT[i]);
+    //     printf("INITIAL: %d\n", pIniRT[i]);
     //     printf("DURATION: %d\n", durationRT[i]);
     // }
 	
+	shmdt(pPriority);
+	shmdt(pIniRT);
+	shmdt(pDurationRT);
+	shmdt(pQtProg);
+	
+	shmctl(shmid_priority, IPC_RMID, 0);
+	shmctl(shmid_iniRT, IPC_RMID, 0);
+	shmctl(shmid_durationRT, IPC_RMID, 0);
+	shmctl(shmid_qtProg, IPC_RMID, 0);
+
 }
+

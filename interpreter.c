@@ -3,12 +3,25 @@
 
 void readExec()
 {
+
+	int shmid_priority = shmget(1001, MAX_PROG * sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR);
+	int* pPriority = (int*) shmat(shmid_priority, 0, 0);
+
+	int shmid_iniRT = shmget(1002, MAX_PROG * sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR);
+	int* pIniRT = (int*) shmat(shmid_iniRT, 0, 0);
+	
+	int shmid_durationRT = shmget(1003, MAX_PROG * sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR);
+	int* pDurationRT = (int*) shmat(shmid_durationRT, 0, 0);
+	
+	int shmid_numProg = shmget(1004, sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR);
+	int* pNumProg = (int*) shmat(shmid_numProg, 0, 0);
+	
+	
     FILE* fp;
     int len = 40; // max length of line in exec.txt
     char line[40];
     char* splitLine;
     char prog[MAX_PROG][TAM]; // array of program's name
-    int priority[MAX_PROG], iniRT[MAX_PROG], durationRT[MAX_PROG];
     char* progIni; // pointer to the initial position of array returned by shmat
     int numProg = 0; // number of current program
 
@@ -26,9 +39,9 @@ void readExec()
         splitLine = strtok(NULL, " =\n");
         strcpy(prog[numProg], splitLine);
         splitLine = strtok(NULL, " =\n");
-        priority[numProg] = -1;
-        iniRT[numProg] = -1;
-        durationRT[numProg] = -1;
+        pPriority[numProg] = -1;
+        pIniRT[numProg] = -1;
+        pDurationRT[numProg] = -1;
         if (splitLine == NULL)
         {
         }
@@ -44,7 +57,7 @@ void readExec()
                     printf("Insert a priority number between 1 and 7\n");
                     continue;
                 }
-                priority[numProg] = priorityNumber;
+                pPriority[numProg] = priorityNumber;
             }
             else
             {
@@ -56,14 +69,21 @@ void readExec()
                 splitLine = strtok(NULL, " =\n");
                 duration = strtol(splitLine, &splitLine, 10);
 
-                iniRT[numProg] = init;
-                durationRT[numProg] = duration;
+                pIniRT[numProg] = init;
+                pDurationRT[numProg] = duration;
             }
         }
         numProg++;
     }
+    
+    *pNumProg = numProg;
 
-    scheduler(prog, priority, iniRT, durationRT, numProg);
+    scheduler(prog);
 
     fclose(fp);
+    
+    shmdt(pPriority);
+    shmdt(pIniRT);
+    shmdt(pDurationRT);
+    shmdt(pNumProg);
 }
