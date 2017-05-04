@@ -50,4 +50,4 @@ void heap_display(struct heap *h);
 int heap_delete(struct heap *h);
 int emptyPQ(struct heap *pq);
 
-void scheduler(char prog[][TAM]);
+void scheduler();

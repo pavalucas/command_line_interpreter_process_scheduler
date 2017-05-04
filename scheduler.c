@@ -225,8 +225,10 @@ void putProcessQueue(Queue* priorProc[], Queue* roundRobin, int priority[], NODE
 		Enqueue(priorProc[priority[curProg]], progNode);
 }
 
-void scheduler(char prog[][TAM])
+void scheduler()
 {
+	int shmid_prog = shmget(1000, MAX_PROG * TAM * sizeof(char), S_IRUSR | S_IWUSR);
+	char* pProg = (char*) shmat(shmid_prog, 0, 0);// array of program's name
 	
 	int shmid_priority = shmget(1001, MAX_PROG * sizeof(int), S_IRUSR | S_IWUSR);
 	int* pPriority = (int*) shmat(shmid_priority, 0, 0);
@@ -284,7 +286,7 @@ void scheduler(char prog[][TAM])
         else
         {
             sleep(1);
-            execve(prog[i], NULL, NULL);
+            execve(pProg+i*100, NULL, NULL);
         }
     }
 
@@ -349,11 +351,13 @@ void scheduler(char prog[][TAM])
     //     printf("DURATION: %d\n", durationRT[i]);
     // }
 	
+	shmdt(pProg);
 	shmdt(pPriority);
 	shmdt(pIniRT);
 	shmdt(pDurationRT);
 	shmdt(pQtProg);
 	
+	shmctl(shmid_prog, IPC_RMID, 0);
 	shmctl(shmid_priority, IPC_RMID, 0);
 	shmctl(shmid_iniRT, IPC_RMID, 0);
 	shmctl(shmid_durationRT, IPC_RMID, 0);

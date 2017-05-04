@@ -3,6 +3,8 @@
 
 void readExec()
 {
+	int shmid_prog = shmget(1000, MAX_PROG * TAM * sizeof(char), IPC_CREAT | S_IRUSR | S_IWUSR);
+	char* pProg = (char*) shmat(shmid_prog, 0, 0);// array of program's name
 
 	int shmid_priority = shmget(1001, MAX_PROG * sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR);
 	int* pPriority = (int*) shmat(shmid_priority, 0, 0);
@@ -37,7 +39,7 @@ void readExec()
 		
         splitLine = strtok(line, " =\n");
         splitLine = strtok(NULL, " =\n");
-        strcpy(prog[numProg], splitLine);
+        strcpy(pProg+numProg*TAM, splitLine);
         splitLine = strtok(NULL, " =\n");
         pPriority[numProg] = -1;
         pIniRT[numProg] = -1;
@@ -78,10 +80,11 @@ void readExec()
     
     *pNumProg = numProg;
 
-    scheduler(prog);
+    scheduler();
 
     fclose(fp);
     
+    shmdt(pProg);
     shmdt(pPriority);
     shmdt(pIniRT);
     shmdt(pDurationRT);
