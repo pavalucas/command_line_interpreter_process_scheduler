@@ -222,7 +222,7 @@ void putProcessQueue(Queue* priorProc[], Queue* roundRobin, int priority[], NODE
 	if(priority[curProg] == -1)
 		Enqueue(roundRobin, progNode);
 	else
-		Enqueue(priorProc[curProg], progNode);
+		Enqueue(priorProc[priority[curProg]], progNode);
 }
 
 void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], int qtdProg)
@@ -311,9 +311,9 @@ void scheduler(char prog[][TAM], int priority[], int iniRT[], int durationRT[], 
 				fflush(stdout);
 				finished[curProg] =1;
 				free(curProgNode);
-				if(!isEmpty(roundRobin))
+				curProgNode = nextProcess(priorityProc, roundRobin);
+				if(curProgNode != NULL)
 				{
-					curProgNode = nextProcess(priorityProc, roundRobin);
 					curProg = curProgNode->data.info;
 				}
 			  	j = 0;
