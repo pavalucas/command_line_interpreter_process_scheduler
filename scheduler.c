@@ -364,4 +364,9 @@ void scheduler()
 	shmctl(shmid_qtProg, IPC_RMID, 0);
 
 }
+int main()
+{
+	scheduler();
+	return 0;
+}
 

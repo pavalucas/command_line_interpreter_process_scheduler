@@ -23,8 +23,6 @@ void readExec()
     int len = 40; // max length of line in exec.txt
     char line[40];
     char* splitLine;
-    char prog[MAX_PROG][TAM]; // array of program's name
-    char* progIni; // pointer to the initial position of array returned by shmat
     int numProg = 0; // number of current program
 
     fp = fopen("exec.txt", "r");
@@ -80,8 +78,6 @@ void readExec()
     
     *pNumProg = numProg;
 
-    scheduler();
-
     fclose(fp);
     
     shmdt(pProg);
@@ -90,3 +86,10 @@ void readExec()
     shmdt(pDurationRT);
     shmdt(pNumProg);
 }
+
+int main()
+{
+	readExec();
+	return 0;
+}
+
