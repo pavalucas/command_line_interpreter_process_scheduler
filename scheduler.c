@@ -71,103 +71,7 @@ int isEmpty(Queue* pQueue) {
     }
 }
 
-void heap_init(struct heap *h)
-{
-    h->count = 0;
-    h->size = 1;
-    h->heaparr = (int *) malloc(sizeof(int));
-    if(!h->heaparr) {
-        printf("Error allocatinga memory...\n");
-        exit(-1);
-    }
-
-}
-
-void max_heapify(int *data, int loc, int count) {
-    int left, right, largest, temp;
-    left = 2*(loc) + 1;
-    right = left + 1;
-    largest = loc;
-    
-
-    if (left <= count && data[left] > data[largest]) {
-        largest = left;
-    } 
-    if (right <= count && data[right] > data[largest]) {
-        largest = right;
-    } 
-    
-    if(largest != loc) {
-        temp = data[loc];
-        data[loc] = data[largest];
-        data[largest] = temp;
-        max_heapify(data, largest, count);
-    }
-
-}
-
-void heap_push(struct heap *h, int value)
-{
-    int index, parent;
- 
-    // Resize the heap if it is too small to hold all the data
-    if (h->count == h->size)
-    {
-        h->size += 1;
-        h->heaparr = realloc(h->heaparr, sizeof(int) * h->size);
-        if (!h->heaparr) exit(-1); // Exit if the memory allocation fails
-    }
-    
-    index = h->count++; // First insert at last of array
-
-    // Find out where to put the element and put it
-    for(;index; index = parent)
-    {
-        parent = (index - 1) / 2;
-        if (h->heaparr[parent] >= value) break;
-        h->heaparr[index] = h->heaparr[parent];
-    }
-    h->heaparr[index] = value;
-}
-
-void heap_display(struct heap *h) {
-    int i;
-    for(i=0; i<h->count; ++i) {
-        printf("|%d|", h->heaparr[i]);
-    }
-    printf("\n");
-}
-
-int heap_delete(struct heap *h)
-{
-    int removed;
-    int temp = h->heaparr[--h->count];
-    
-    
-    if ((h->count <= (h->size + 2)) && (h->size > 0))
-    {
-        h->size -= 1;
-        h->heaparr = realloc(h->heaparr, sizeof(int) * h->size);
-        if (!h->heaparr) exit(-1); // Exit if the memory allocation fails
-    }
-    removed = h->heaparr[0];
-    h->heaparr[0] = temp;
-    max_heapify(h->heaparr, 0, h->count);
-    return removed;
-}
-
-
-int emptyPQ(struct heap *pq) {
-    int i;
-    while(pq->count != 0) {
-        printf("<<%d", heap_delete(pq));
-    }
-}
-
-int index_prog_atual;
-int pid_atual;
-
-// Testa se todos programas ja terminaram
+// Tests if all programs have ended
 int allProgramsFinished(int finished[],int n)
 {
     int i;
@@ -180,7 +84,7 @@ int allProgramsFinished(int finished[],int n)
     return 1;
 }
 
-// Testa se tem apenas um unico programa rodando
+// Tests if there is only one program executing
 int onlyProgram(int finished[], int n)
 {
     int i;
@@ -206,12 +110,12 @@ NODE* nextProcess(Queue* priorProc[], Queue* roundRobin)
 	{
 		if(priorProc[i] != NULL && !isEmpty(priorProc[i]))
 		{
-			return Dequeue(priorProc[i]);	
+			return Dequeue(priorProc[i]);
 		}
 	}
 	if(roundRobin != NULL && !isEmpty(roundRobin))
 	{
-		return Dequeue(roundRobin);	
+		return Dequeue(roundRobin);
 	}
 	return NULL;
 }
@@ -225,11 +129,41 @@ void putProcessQueue(Queue* priorProc[], Queue* roundRobin, int priority[], NODE
 		Enqueue(priorProc[priority[curProg]], progNode);
 }
 
+int checkRealTimeConflict(RT* realTime, int qtRT, int ini, int dur)
+{
+    for(int i = 0; i < qtRT; i++)
+    {
+        int iniAt = realTime[i].ini;
+        int durAt = realTime[i].dur;
+        if((iniAt >= ini && iniAt + durAt <= ini + dur) || (ini >= iniAt && ini + dur <= iniAt + durAt))
+            return 0;
+        if((ini <= iniAt && ini + dur >= iniAt) || (iniAt <= ini && iniAt + durAt >= ini))
+            return 0;
+    }
+    return 1;
+}
+
+int checkRealTimeStart(RT* realTime, int qtRT, int qtSec, int finished[])
+{
+    //printf("qtSecFunction %ld\n", qtSec);
+    for(int i = 0; i < qtRT; i++)
+    {
+        int numProg = realTime[i].numProg;
+        //printf("ini %ld\n", realTime[i].ini);
+        if(realTime[i].ini == qtSec && !finished[numProg])
+        {
+            //printf("entrei aqui\n");
+            return numProg;
+        }
+    }
+    return -1;
+}
+
 void scheduler()
 {
 	int shmid_prog = shmget(1000, MAX_PROG * TAM * sizeof(char), S_IRUSR | S_IWUSR);
 	char* pProg = (char*) shmat(shmid_prog, 0, 0);// array of program's name
-	
+
 	int shmid_priority = shmget(1001, MAX_PROG * sizeof(int), S_IRUSR | S_IWUSR);
 	int* pPriority = (int*) shmat(shmid_priority, 0, 0);
 
@@ -247,16 +181,23 @@ void scheduler()
 	int pid[MAX_PROG], n_pid, i, j, curProg;
 	int finished[MAX_PROG];
 	int result, status;
-	int quantum = 3;
+	int quantum = 3; // in seconds
 	Queue* roundRobin = ConstructQueue(qtdProg);
-	Queue* priorityProc[7];
+	Queue* priorityProc[8]; // each queue represents a level of priority
 	NODE *curProgNode;
+    RT* realTime = (RT*)malloc(sizeof(RT) * qtdProg);
+    int countRT = 0; // count how many RT valid processes
+    int isRTRunning = 0; // if value is 1 there's a RT process running, otherwise 0
+    int procRT, temp;
+    struct timeval iniTime;
+    struct timeval curTime;
+    time_t qtSec;
 
 	for(i = 1; i <= 7; i++)
 		priorityProc[i] = ConstructQueue(qtdProg);
 
-	for (i = 0; i < qtdProg; i++) 
-	{	
+	for (i = 0; i < qtdProg; i++)
+	{
 		finished[i] = 0;
 		// ROUND ROBIN
 		if(pPriority[i] == -1 && pIniRT[i] == -1 && pDurationRT[i] == -1)
@@ -264,17 +205,43 @@ void scheduler()
 			curProgNode = (NODE*) malloc(sizeof (NODE));
 			curProgNode->data.info = i;
 			Enqueue(roundRobin, curProgNode);
-		} 
+		}
 		// PRIORITY
 		else if(pPriority[i] != -1)
 		{
-			
+
 			curProgNode = (NODE*) malloc(sizeof (NODE));
 			curProgNode->data.info = i;
 			Enqueue(priorityProc[pPriority[i]], curProgNode);
 		}
+        // REAL TIME
+        else
+        {
+            if(pIniRT[i] + pDurationRT[i] <= 60)
+            {
+                // Checar se o cara que vou inserir entra em conflito com os já existentes
+                if(checkRealTimeConflict(realTime, countRT, pIniRT[i], pDurationRT[i]))
+                {
+                    realTime[countRT].numProg = i;
+                    realTime[countRT].ini = pIniRT[i];
+                    realTime[countRT].dur = pDurationRT[i];
+                    countRT++;
+                }
+                else
+                {
+                    printf("O programa %s entra em conflito com um programa já existente.\n", pProg+i*100);
+                    return;
+                }
+            }
+            else
+            {
+                printf("O programa %s não tem entradas satisfatórias. I+D é maior que 60 segundos.\n", pProg+i*100);
+                return;
+            }
+        }
 	}
 
+    // Initializing all process and stopping their execution
     for(i = 0; i < qtdProg; i++)
     {
         n_pid = fork();
@@ -290,19 +257,69 @@ void scheduler()
         }
     }
 
+    gettimeofday(&iniTime, NULL);
     j = 0;
 	curProgNode = nextProcess(priorityProc, roundRobin);
-	curProg = curProgNode->data.info;
+    if(curProgNode != NULL)
+	   curProg = curProgNode->data.info;
+    else
+        curProg = -1;
     while(1)
     {
 
         if(allProgramsFinished(finished, qtdProg))
 			break;
-        if(!finished[curProg])
+
+        gettimeofday(&curTime, NULL);
+        qtSec = curTime.tv_sec - iniTime.tv_sec;
+        //sleep(1);
+        //printf("qtSec %ld\n", qtSec);
+        temp = checkRealTimeStart(realTime, countRT, qtSec, finished);
+        if(isRTRunning == 0 && temp >= 0)
+        {
+            // printf("entrei\n");
+            // printf("CurProg %d\n", curProg);
+            // printf("ProcRT %d\n", procRT);
+
+            procRT = temp;
+
+            if(curProg != -1)
+            {
+                kill(pid[curProg], SIGSTOP);
+            }
+
+            isRTRunning = 1;
+        }
+        if(isRTRunning)
+        {
+            //printf("Entrei RT\n");
+            // printf("ProcRT Cont %d\n", procRT);
+            kill(pid[procRT], SIGCONT);
+            fflush(stdout);
+            sleep(1);
+            result = waitpid(pid[procRT], &status, WNOHANG);
+            //printf("Result: %d\n", result);
+            if (result == 0)
+            {
+                if(pIniRT[procRT] + pDurationRT[procRT] == qtSec)
+                {
+                    //printf("entrei fim\n");
+                    kill(pid[procRT], SIGSTOP);
+                    isRTRunning = 0;
+                }
+            }
+            else
+            {
+                printf("Terminou  %s\n", pProg+procRT*100);
+                fflush(stdout);
+                finished[procRT] = 1;
+                isRTRunning = 0;
+            }
+        }
+        else if(curProg != -1 && !finished[curProg])
         {
 			kill(pid[curProg], SIGCONT);
 			fflush(stdout);
-			pid_atual = pid[curProg];
 			sleep(1);
 			result = waitpid(pid[curProg], &status, WNOHANG);
 			if (result == 0)
@@ -315,24 +332,25 @@ void scheduler()
 				{
 					kill(pid[curProg], SIGSTOP);
 					putProcessQueue(priorityProc, roundRobin, pPriority, curProgNode);
-					curProgNode = nextProcess(priorityProc, roundRobin);	
+					curProgNode = nextProcess(priorityProc, roundRobin);
 					curProg = curProgNode->data.info;
 				}
 				j = 0;
 			  }
-
 			}
 			else
 			{
-				printf("Terminou  P%d\n", curProg+1);
+				printf("Terminou  %s\n", pProg+curProg*100);
 				fflush(stdout);
-				finished[curProg] =1;
+				finished[curProg] = 1;
 				free(curProgNode);
 				curProgNode = nextProcess(priorityProc, roundRobin);
 				if(curProgNode != NULL)
 				{
 					curProg = curProgNode->data.info;
 				}
+                else
+                    curProg = -1;
 			  	j = 0;
 			}
 		}
@@ -350,13 +368,13 @@ void scheduler()
     //     printf("INITIAL: %d\n", pIniRT[i]);
     //     printf("DURATION: %d\n", durationRT[i]);
     // }
-	
+
 	shmdt(pProg);
 	shmdt(pPriority);
 	shmdt(pIniRT);
 	shmdt(pDurationRT);
 	shmdt(pQtProg);
-	
+
 	shmctl(shmid_prog, IPC_RMID, 0);
 	shmctl(shmid_priority, IPC_RMID, 0);
 	shmctl(shmid_iniRT, IPC_RMID, 0);

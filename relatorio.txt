@@ -1,0 +1,207 @@
+Alunos: Handel Scholze (1512479) e Lucas Pavanelli (1511341)
+
+Compilação:
+------------------
+gcc prog1.c -o p1
+gcc prog2.c -o p2
+gcc prog3.c -o p3
+gcc prog4.c -o p4
+gcc interpreter.c -o inter
+gcc scheduler.c -o sch
+
+Executar:
+-------------
+./inter
+./sch
+
+!(EXPLICAR O USO DE MEMÓRIA COMPARTILHADA NO NOSSO TRABALHO)!
+
+Nos testes a fatia de tempo utilizada foi igual a 3 segundos.
+(no código corresponde à variável 'quantum')
+
+Teste 1:
+----------------
+EXEC p1
+EXEC p2
+EXEC p3
+EXEC p4
+
+Saída:
+---------
+P1 rodando 0
+P1 rodando 1
+P2 rodando 0
+P2 rodando 1
+P3 rodando 0
+P3 rodando 1
+P4 rodando 0
+P4 rodando 1
+P1 rodando 2
+P1 rodando 3
+P1 rodando 4
+P2 rodando 2
+P2 rodando 3
+P2 rodando 4
+P3 rodando 2
+P3 rodando 3
+P3 rodando 4
+P4 rodando 2
+P4 rodando 3
+Terminou  p4
+P1 rodando 5
+P1 rodando 6
+Terminou  p1
+P2 rodando 5
+P2 rodando 6
+P2 rodando 7
+P3 rodando 5
+Terminou  p3
+Terminou  p2
+
+Análise:
+----------
+
+Teste 2:
+----------------
+EXEC p1 PR=3
+EXEC p2
+EXEC p3 PR=3
+EXEC p4 PR=1
+
+Saída:
+------------
+P4 rodando 0
+P4 rodando 1
+P4 rodando 2
+P4 rodando 3
+Terminou  p4
+P1 rodando 0
+P1 rodando 1
+P3 rodando 0
+P3 rodando 1
+P1 rodando 2
+P1 rodando 3
+P1 rodando 4
+P3 rodando 2
+P3 rodando 3
+P3 rodando 4
+P1 rodando 5
+P1 rodando 6
+Terminou  p1
+P3 rodando 5
+Terminou  p3
+P2 rodando 0
+P2 rodando 1
+P2 rodando 2
+P2 rodando 3
+P2 rodando 4
+P2 rodando 5
+P2 rodando 6
+P2 rodando 7
+Terminou  p2
+
+Análise:
+-----------
+
+Teste 3:
+-----------------
+EXEC p1 I=40 D=30
+EXEC p2
+EXEC p3 PR=3
+EXEC p4 PR=1
+
+Saída:
+-------
+O programa p1 não tem entradas satisfatórias. I+D é maior que 60 segundos.
+
+Análise:
+---------
+
+Teste 4:
+-----------------
+EXEC p1 I=25 D=20
+EXEC p2 I=20 D=10
+EXEC p3 PR=3
+EXEC p4 PR=1
+
+Saída:
+-------
+O programa p2 entra em conflito com um programa já existente.
+
+Análise:
+---------
+
+Teste 4:
+-----------------
+EXEC p2 I=1 D=10
+EXEC p3 PR=2
+EXEC p4 PR=1
+
+Saída:
+-------
+P2 rodando 0
+P2 rodando 1
+P2 rodando 2
+P2 rodando 3
+P2 rodando 4
+P2 rodando 5
+P2 rodando 6
+P2 rodando 7
+Terminou  p2
+P4 rodando 0
+P4 rodando 1
+P4 rodando 2
+P4 rodando 3
+Terminou  p4
+P3 rodando 0
+P3 rodando 1
+P3 rodando 2
+P3 rodando 3
+P3 rodando 4
+P3 rodando 5
+Terminou  p3
+
+Análise:
+---------
+
+Teste 6:
+-------------
+EXEC p1 I=5 D=10
+EXEC p2 I=20 D=10
+EXEC p3
+EXEC p4 PR=1
+
+Saída:
+---------
+P4 rodando 0
+P4 rodando 1
+P4 rodando 2
+P4 rodando 3
+P1 rodando 0
+P1 rodando 1
+P1 rodando 2
+P1 rodando 3
+P1 rodando 4
+P1 rodando 5
+P1 rodando 6
+Terminou  p1
+Terminou  p4
+P3 rodando 0
+P3 rodando 1
+P3 rodando 2
+P3 rodando 3
+P2 rodando 0
+P2 rodando 1
+P2 rodando 2
+P2 rodando 3
+P2 rodando 4
+P2 rodando 5
+P2 rodando 6
+P2 rodando 7
+Terminou  p2
+P3 rodando 4
+P3 rodando 5
+Terminou  p3
+
+Análise:
+---------
